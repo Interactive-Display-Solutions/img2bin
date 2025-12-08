@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 출력 파일 (예제 제외)
+*.bin
+!demo5bin
+
+# 미리보기 이미지
+preview_*.jpg
+
+# macOS
+.DS_Store
+
+# 테스트 파일
+test_*
+
+
