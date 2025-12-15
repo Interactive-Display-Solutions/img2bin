@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JPG to BIN Converter - EPD 6-Color Palette</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .lang-switcher {
+            position: absolute;
+            top: 0;
+            right: 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .lang-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+
+        .lang-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .lang-btn.active {
+            background: white;
+            color: #667eea;
+            border-color: white;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 15px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .options {
+            margin: 20px 0;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .preview-image {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stats {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .stats h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .color-bar {
+            display: flex;
+            height: 40px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .color-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            font-weight: bold;
+        }
+
+        .color-list {
+            list-style: none;
+        }
+
+        .color-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .color-item:last-child {
+            border-bottom: none;
+        }
+
+        .color-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        .palette-demo {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .palette-color {
+            text-align: center;
+        }
+
+        .palette-swatch {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            margin-bottom: 5px;
+        }
+
+        .palette-name {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .lang-switcher {
+                position: static;
+                justify-content: center;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="lang-switcher">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ko">KO</button>
+            </div>
+            <h1 data-i18n="title">🎨 JPG to BIN Converter</h1>
+            <p data-i18n="subtitle">EPD 6-color palette (1200x1600) conversion and preview</p>
+        </div>
+
+        <div class="cards">
+            <!-- JPG to BIN 변환 -->
+            <div class="card">
+                <h2 data-i18n="convert_title">📤 JPG → BIN Conversion</h2>
+                <div class="upload-area" id="convertUploadArea">
+                    <div class="upload-icon">🖼️</div>
+                    <p data-i18n="convert_upload">Drag and drop JPG/PNG file or click to select</p>
+                    <input type="file" id="convertInput" class="file-input" accept=".jpg,.jpeg,.png">
+                    <button class="btn" onclick="document.getElementById('convertInput').click()" data-i18n="select_file">Select File</button>
+                </div>
+
+                <div class="loading" id="convertLoading">
+                    <div class="spinner"></div>
+                    <p data-i18n="converting">Converting...</p>
+                </div>
+
+                <div class="error" id="convertError"></div>
+
+                <div class="result" id="convertResult">
+                    <img id="convertPreview" class="preview-image" alt="Conversion result">
+                    <div class="stats" id="convertStats"></div>
+                    <button class="btn" id="downloadBtn" data-i18n="download_bin">📥 Download BIN File</button>
+                </div>
+
+                <div class="options" style="margin-top: 20px;">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="ditherCheckbox" checked>
+                        <span data-i18n="dither_option">Use Floyd-Steinberg dithering (smoother gradients)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- BIN 미리보기 -->
+            <div class="card">
+                <h2 data-i18n="preview_title">👁️ BIN File Preview</h2>
+                <div class="upload-area" id="previewUploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p data-i18n="preview_upload">Drag and drop BIN file or click to select</p>
+                    <input type="file" id="previewInput" class="file-input" accept=".bin">
+                    <button class="btn" onclick="document.getElementById('previewInput').click()" data-i18n="select_file">Select File</button>
+                </div>
+
+                <div class="loading" id="previewLoading">
+                    <div class="spinner"></div>
+                    <p data-i18n="generating_preview">Generating preview...</p>
+                </div>
+
+                <div class="error" id="previewError"></div>
+
+                <div class="result" id="previewResult">
+                    <img id="previewPreview" class="preview-image" alt="Preview">
+                    <div class="stats" id="previewStats"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 팔레트 정보 -->
+        <div class="card">
+            <h2 data-i18n="palette_title">🎨 EPD 6-Color Palette</h2>
+            <p style="margin-bottom: 15px; color: #666;" data-i18n="palette_desc">
+                This tool converts images to the following 6 colors:
+            </p>
+            <div class="palette-demo">
+                <div class="palette-color">
+                    <div class="palette-swatch" style="background-color: rgb(0, 0, 0);"></div>
+                    <div class="palette-name" data-i18n="color_black">Black</div>
+                </div>
+                <div class="palette-color">
+                    <div class="palette-swatch" style="background-color: rgb(255, 255, 255);"></div>
+                    <div class="palette-name" data-i18n="color_white">White</div>
+                </div>
+                <div class="palette-color">
+                    <div class="palette-swatch" style="background-color: rgb(255, 255, 0);"></div>
+                    <div class="palette-name" data-i18n="color_yellow">Yellow</div>
+                </div>
+                <div class="palette-color">
+                    <div class="palette-swatch" style="background-color: rgb(255, 0, 0);"></div>
+                    <div class="palette-name" data-i18n="color_red">Red</div>
+                </div>
+                <div class="palette-color">
+                    <div class="palette-swatch" style="background-color: rgb(0, 0, 255);"></div>
+                    <div class="palette-name" data-i18n="color_blue">Blue</div>
+                </div>
+                <div class="palette-color">
+                    <div class="palette-swatch" style="background-color: rgb(0, 255, 0);"></div>
+                    <div class="palette-name" data-i18n="color_green">Green</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // i18n translations
+        const translations = {
+            en: {
+                title: "🎨 JPG to BIN Converter",
+                subtitle: "EPD 6-color palette (1200x1600) conversion and preview",
+                convert_title: "📤 JPG → BIN Conversion",
+                convert_upload: "Drag and drop JPG/PNG file or click to select",
+                preview_title: "👁️ BIN File Preview",
+                preview_upload: "Drag and drop BIN file or click to select",
+                palette_title: "🎨 EPD 6-Color Palette",
+                palette_desc: "This tool converts images to the following 6 colors:",
+                select_file: "Select File",
+                converting: "Converting...",
+                generating_preview: "Generating preview...",
+                download_bin: "📥 Download BIN File",
+                dither_option: "Use Floyd-Steinberg dithering (smoother gradients)",
+                color_black: "Black",
+                color_white: "White",
+                color_yellow: "Yellow",
+                color_red: "Red",
+                color_blue: "Blue",
+                color_green: "Green",
+                color_distribution: "Color Distribution",
+                file_size: "File size",
+                bytes: "bytes",
+                pixels: "px"
+            },
+            ko: {
+                title: "🎨 JPG to BIN 변환기",
+                subtitle: "EPD 6색 팔레트 (1200x1600) 변환 및 미리보기",
+                convert_title: "📤 JPG → BIN 변환",
+                convert_upload: "JPG/PNG 파일을 드래그하거나 클릭하세요",
+                preview_title: "👁️ BIN 파일 미리보기",
+                preview_upload: "BIN 파일을 드래그하거나 클릭하세요",
+                palette_title: "🎨 EPD 6색 팔레트",
+                palette_desc: "이 도구는 이미지를 다음 6가지 색상으로 변환합니다:",
+                select_file: "파일 선택",
+                converting: "변환 중...",
+                generating_preview: "미리보기 생성 중...",
+                download_bin: "📥 BIN 파일 다운로드",
+                dither_option: "Floyd-Steinberg 디더링 사용 (더 부드러운 그라데이션)",
+                color_black: "검정",
+                color_white: "흰색",
+                color_yellow: "노랑",
+                color_red: "빨강",
+                color_blue: "파랑",
+                color_green: "초록",
+                color_distribution: "색상 분포",
+                file_size: "파일 크기",
+                bytes: "바이트",
+                pixels: "픽셀"
+            }
+        };
+
+        // Color mapping for stats
+        const colorMap = {
+            'Black': { color: 'rgb(0, 0, 0)', textColor: '#fff' },
+            'White': { color: 'rgb(255, 255, 255)', textColor: '#000' },
+            'Yellow': { color: 'rgb(255, 255, 0)', textColor: '#000' },
+            'Red': { color: 'rgb(255, 0, 0)', textColor: '#fff' },
+            'Blue': { color: 'rgb(0, 0, 255)', textColor: '#fff' },
+            'Green': { color: 'rgb(0, 255, 0)', textColor: '#000' },
+            '검정': { color: 'rgb(0, 0, 0)', textColor: '#fff' },
+            '흰색': { color: 'rgb(255, 255, 255)', textColor: '#000' },
+            '노랑': { color: 'rgb(255, 255, 0)', textColor: '#000' },
+            '빨강': { color: 'rgb(255, 0, 0)', textColor: '#fff' },
+            '파랑': { color: 'rgb(0, 0, 255)', textColor: '#fff' },
+            '초록': { color: 'rgb(0, 255, 0)', textColor: '#000' }
+        };
+
+        // Get current language from localStorage or default to English
+        let currentLang = localStorage.getItem('lang') || 'en';
+
+        // i18n function
+        function t(key) {
+            return translations[currentLang][key] || translations['en'][key] || key;
+        }
+
+        // Update all text content
+        function updateLanguage() {
+            document.documentElement.lang = currentLang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.textContent = t(key);
+            });
+            
+            // Update language buttons
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                if (btn.getAttribute('data-lang') === currentLang) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Language switcher
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentLang = btn.getAttribute('data-lang');
+                localStorage.setItem('lang', currentLang);
+                updateLanguage();
+            });
+        });
+
+        // Initialize language on load
+        updateLanguage();
+
+        // File drag and drop setup
+        function setupDragAndDrop(uploadArea, fileInput, onFileSelect) {
+            uploadArea.addEventListener('click', () => fileInput.click());
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) onFileSelect(file);
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) onFileSelect(file);
+            });
+        }
+
+        // Render statistics
+        function renderStats(stats, containerId) {
+            const container = document.getElementById(containerId);
+            const colors = stats.colors;
+            
+            let html = `<h3>📊 ${t('color_distribution')}</h3>`;
+            
+            // Color bar - sort by percentage for better visualization
+            const sortedColors = Object.entries(colors)
+                .filter(([name, data]) => data.percentage > 0)
+                .sort((a, b) => b[1].percentage - a[1].percentage);
+            
+            html += '<div class="color-bar">';
+            for (const [colorName, data] of sortedColors) {
+                const colorInfo = colorMap[colorName];
+                if (colorInfo && colorInfo.color) {
+                    html += `<div class="color-segment" style="width: ${data.percentage}%; background-color: ${colorInfo.color}; color: ${colorInfo.textColor};">`;
+                    if (data.percentage > 5) {
+                        html += `${data.percentage}%`;
+                    }
+                    html += '</div>';
+                } else {
+                    // Fallback for unknown colors
+                    console.warn('Unknown color name:', colorName);
+                }
+            }
+            html += '</div>';
+            
+            // Color list - show all colors in order
+            html += '<ul class="color-list">';
+            const colorOrder = ['Black', 'White', 'Yellow', 'Red', 'Blue', 'Green'];
+            const colorOrderKo = ['검정', '흰색', '노랑', '빨강', '파랑', '초록'];
+            const orderedColors = currentLang === 'ko' ? colorOrderKo : colorOrder;
+            
+            for (const colorName of orderedColors) {
+                const data = colors[colorName];
+                if (data) {
+                    const colorInfo = colorMap[colorName];
+                    if (colorInfo && colorInfo.color) {
+                        html += `
+                            <li class="color-item">
+                                <span class="color-label">
+                                    <span class="color-swatch" style="background-color: ${colorInfo.color};"></span>
+                                    ${colorName}
+                                </span>
+                                <span>${data.count.toLocaleString()} ${t('pixels')} (${data.percentage}%)</span>
+                            </li>
+                        `;
+                    }
+                }
+            }
+            html += '</ul>';
+            
+            html += `<p style="margin-top: 15px; color: #666;">${t('file_size')}: ${stats.file_size.toLocaleString()} ${t('bytes')}</p>`;
+            
+            container.innerHTML = html;
+        }
+
+        // JPG to BIN conversion
+        setupDragAndDrop(
+            document.getElementById('convertUploadArea'),
+            document.getElementById('convertInput'),
+            (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('dither', document.getElementById('ditherCheckbox').checked);
+                
+                document.getElementById('convertLoading').classList.add('show');
+                document.getElementById('convertError').classList.remove('show');
+                document.getElementById('convertResult').classList.remove('show');
+                
+                fetch('/convert', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('convertLoading').classList.remove('show');
+                    
+                    if (data.error) {
+                        document.getElementById('convertError').textContent = data.error;
+                        document.getElementById('convertError').classList.add('show');
+                        return;
+                    }
+                    
+                    document.getElementById('convertPreview').src = data.preview;
+                    renderStats(data.stats, 'convertStats');
+                    document.getElementById('convertResult').classList.add('show');
+                    
+                    // Download button setup
+                    document.getElementById('downloadBtn').onclick = () => {
+                        window.location.href = data.download_url;
+                    };
+                })
+                .catch(error => {
+                    document.getElementById('convertLoading').classList.remove('show');
+                    document.getElementById('convertError').textContent = 'Error: ' + error.message;
+                    document.getElementById('convertError').classList.add('show');
+                });
+            }
+        );
+
+        // BIN preview
+        setupDragAndDrop(
+            document.getElementById('previewUploadArea'),
+            document.getElementById('previewInput'),
+            (file) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                document.getElementById('previewLoading').classList.add('show');
+                document.getElementById('previewError').classList.remove('show');
+                document.getElementById('previewResult').classList.remove('show');
+                
+                fetch('/preview', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('previewLoading').classList.remove('show');
+                    
+                    if (data.error) {
+                        document.getElementById('previewError').textContent = data.error;
+                        document.getElementById('previewError').classList.add('show');
+                        return;
+                    }
+                    
+                    document.getElementById('previewPreview').src = data.preview;
+                    renderStats(data.stats, 'previewStats');
+                    document.getElementById('previewResult').classList.add('show');
+                })
+                .catch(error => {
+                    document.getElementById('previewLoading').classList.remove('show');
+                    document.getElementById('previewError').textContent = 'Error: ' + error.message;
+                    document.getElementById('previewError').classList.add('show');
+                });
+            }
+        );
+    </script>
+</body>
+</html>

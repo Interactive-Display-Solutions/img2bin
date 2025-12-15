@@ -12,22 +12,31 @@ from PIL import Image
 from collections import Counter
 import argparse
 
-# EPD 6색 팔레트
+# EPD 6색 팔레트 (제조사 제공 PALETTE_AIO_E6)
 EPD_PALETTE = {
-    0: (0, 0, 0),        # 검정
-    1: (255, 255, 255),  # 흰색
-    2: (255, 0, 0),      # 빨강
-    3: (255, 255, 0),    # 노랑
-    4: (255, 128, 0),    # 주황
-    5: (0, 255, 0),      # 초록
+    0: (0x00, 0x00, 0x00),    # 검정 (black)
+    1: (0xFF, 0xFF, 0xFF),    # 흰색 (white)
+    2: (0xFF, 0xFF, 0x00),    # 노랑 (yellow)
+    3: (0xFF, 0x00, 0x00),    # 빨강 (red)
+    4: (0x00, 0x00, 0xFF),    # 파랑 (blue)
+    5: (0x00, 0xFF, 0x00),    # 초록 (green)
 }
 
 COLOR_NAMES = {
+    0: "Black",
+    1: "White",
+    2: "Yellow",
+    3: "Red",
+    4: "Blue",
+    5: "Green"
+}
+
+COLOR_NAMES_KO = {
     0: "검정",
     1: "흰색",
-    2: "빨강",
-    3: "노랑",
-    4: "주황",
+    2: "노랑",
+    3: "빨강",
+    4: "파랑",
     5: "초록"
 }
 
