@@ -16,18 +16,41 @@ ENV/
 *.swo
 *~
 
-# 출력 파일 (예제 제외)
+# 출력 파일 및 임시 파일
 *.bin
+*.log
+preview_*.jpg
+*_preview*.jpg
+*_test*.bin
+*_corrected*.bin
+*_current*.bin
+*_final*.bin
+test_output.bin
+
+# 최적화 스크립트 (개발용)
+optimize*.py
+find_*.py
+test_algorithms.py
+
+# 샘플 이미지 (일부만 포함)
+demo*.jpg
+!demo5.jpg
+demo*.bin
 !demo5bin
 
-# 미리보기 이미지
-preview_*.jpg
+# 테스트 파일
+test_*
+fire_*.jpg
+fire_*.bin
+real_fire*.jpg
+real_fire*.bin
 
 # macOS
 .DS_Store
 
-# 테스트 파일
-test_*
+# 임시 파일
+*.bmp
+convert_*.sh
 
 
 

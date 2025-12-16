@@ -42,9 +42,124 @@ ORDERED_DITHER_MATRIX = np.array([
     [63, 31, 55, 23, 61, 29, 53, 21]
 ], dtype=np.uint8)
 
+# Spectra 6 Vivid 파이프라인 기본 파라미터
+CHROMA_GAIN = 1.30
+CHROMA_THRESHOLD = 0.045
+GRAY_SPLIT_L = 0.55
+HUE_SNAP_STRENGTH = 0.85
+WEIGHT_L = 0.50
+WEIGHT_C = 1.20
+WEIGHT_H = 1.00
+BLUE_NOISE_SIZE = 128
+POST_GAMMA = 0.88
+
+
+# -----------------------------
+# OKLab conversion (sRGB <-> OKLab)
+# -----------------------------
+def srgb_to_linear(srgb):
+    """sRGB to linear RGB"""
+    a = 0.055
+    return np.where(srgb <= 0.04045, srgb / 12.92, ((srgb + a) / (1 + a)) ** 2.4)
+
+def linear_to_srgb(lin):
+    """Linear RGB to sRGB"""
+    a = 0.055
+    lin = np.clip(lin, 0.0, 1.0)  # 음수 값 방지
+    return np.where(lin <= 0.0031308, 12.92 * lin, (1 + a) * np.power(lin, 1/2.4) - a)
+
+def rgb_to_oklab(rgb01):
+    """RGB [0,1] to OKLab"""
+    lin = srgb_to_linear(rgb01)
+    
+    # linear sRGB -> LMS (M1)
+    M1 = np.array([
+        [0.4122214708, 0.5363325363, 0.0514459929],
+        [0.2119034982, 0.6806995451, 0.1073969566],
+        [0.0883024619, 0.2817188376, 0.6299787005]
+    ], dtype=np.float32)
+    lms = lin @ M1.T
+    
+    lms_cbrt = np.cbrt(np.clip(lms, 1e-12, None))
+    
+    # LMS' -> OKLab (M2)
+    M2 = np.array([
+        [0.2104542553, 0.7936177850, -0.0040720468],
+        [1.9779984951, -2.4285922050, 0.4505937099],
+        [0.0259040371, 0.7827717662, -0.8086757660]
+    ], dtype=np.float32)
+    return lms_cbrt @ M2.T  # (...,3) = [L, a, b]
+
+def oklab_to_rgb(lab):
+    """OKLab to RGB [0,1]"""
+    L, a, b = lab[..., 0], lab[..., 1], lab[..., 2]
+    # OKLab -> LMS'
+    M2_inv = np.array([
+        [1.0, 0.3963377774, 0.2158037573],
+        [1.0, -0.1055613458, -0.0638541728],
+        [1.0, -0.0894841775, -1.2914855480]
+    ], dtype=np.float32)
+    lms_ = np.stack([L, a, b], axis=-1) @ M2_inv.T
+    
+    lms = np.power(lms_, 3.0)
+    
+    # LMS -> linear sRGB
+    M1_inv = np.array([
+        [4.0767416621, -3.3077115913, 0.2309699292],
+        [-1.2684380046, 2.6097574011, -0.3413193965],
+        [-0.0041960863, -0.7034186147, 1.7076147010]
+    ], dtype=np.float32)
+    lin = lms @ M1_inv.T
+    
+    rgb = linear_to_srgb(lin)
+    return np.clip(rgb, 0.0, 1.0)
+
+# -----------------------------
+# Blue-noise threshold tile generator
+# -----------------------------
+def make_blue_noise_tile(n=128, seed=0):
+    """Generate blue-noise-like threshold tile"""
+    rng = np.random.default_rng(seed)
+    x = rng.random((n, n)).astype(np.float32)
+    
+    # high-pass 느낌 만들기: blur 흉내 (box blur 여러 번)
+    def box_blur(a):
+        # 3x3 box blur, wrap to make tileable-ish
+        s = (
+            np.roll(a,  1, 0) + np.roll(a, -1, 0) +
+            np.roll(a,  1, 1) + np.roll(a, -1, 1) +
+            a +
+            np.roll(np.roll(a,  1, 0),  1, 1) +
+            np.roll(np.roll(a,  1, 0), -1, 1) +
+            np.roll(np.roll(a, -1, 0),  1, 1) +
+            np.roll(np.roll(a, -1, 0), -1, 1)
+        ) / 9.0
+        return s
+    
+    blur = x.copy()
+    for _ in range(6):
+        blur = box_blur(blur)
+    
+    hp = x - blur
+    # rank normalize to [0,1] thresholds
+    flat = hp.flatten()
+    order = np.argsort(flat)
+    thresh = np.empty_like(flat)
+    thresh[order] = np.linspace(0, 1, flat.size, endpoint=False)
+    return thresh.reshape(n, n).astype(np.float32)
+
+# -----------------------------
+# Palette in OKLab space
+# -----------------------------
+def get_palette_oklab():
+    """Get palette colors in OKLab space"""
+    names = list(EPD_PALETTE.keys())
+    rgb = np.array([EPD_PALETTE[k] for k in names], dtype=np.float32) / 255.0
+    lab = rgb_to_oklab(rgb)
+    return names, rgb, lab
 
 def rgb_to_nearest_color(rgb):
-    """RGB 값을 가장 가까운 EPD 팔레트 색상 인덱스로 변환"""
+    """RGB 값을 가장 가까운 EPD 팔레트 색상 인덱스로 변환 (기존 방식, 하위 호환)"""
     r, g, b = rgb
     min_distance = float('inf')
     nearest_index = 0
@@ -59,13 +174,14 @@ def rgb_to_nearest_color(rgb):
     return nearest_index, EPD_PALETTE[nearest_index]
 
 
-def ordered_dither(img_array):
-    """E Ink Spectra6용 Ordered Dithering (C 파일 로직 정확히 따름)
+def eink_default_dither(img_array):
+    """
+    E Ink Spectra6 기본 디더링 알고리즘 (E6_dithering_sample.c 기반)
     
     C 코드의 dither_image 함수를 정확히 구현:
     1. 경계 제외하고 디더링 (y=1부터 height-1, x=1부터 width-1)
     2. 각 채널(B, G, R)에 대해 값/4 >= 매트릭스값이면 255, 아니면 0
-    3. 색상 보정 적용
+    3. 색상 보정 적용 (magenta, yellow 처리)
     4. 디더링된 결과를 6색 팔레트로 매핑
     """
     height, width = img_array.shape[:2]
@@ -93,6 +209,56 @@ def ordered_dither(img_array):
                     bgr_array[y, x, c] = 255
                 else:
                     bgr_array[y, x, c] = 0
+    
+    # C 코드: 색상 보정 (전체 이미지에 대해, 경계 포함)
+    for y in range(height):
+        for x in range(width):
+            # BGR 형식: data[idx] = B, data[idx+1] = G, data[idx+2] = R
+            b = bgr_array[y, x, 0]
+            g = bgr_array[y, x, 1]
+            r = bgr_array[y, x, 2]
+            matrix_val = ORDERED_DITHER_MATRIX[y % 8, x % 8]
+            
+            # C 코드: if (data[idx] == 255 && data[idx + 1] == 0 && data[idx + 2] == 255)
+            # Magenta (B=255, G=0, R=255) 처리
+            if b == 255 and g == 0 and r == 255:
+                if matrix_val > 32:
+                    bgr_array[y, x, 0] = 0
+                    bgr_array[y, x, 1] = 0
+                    bgr_array[y, x, 2] = 255  # Blue
+                else:
+                    bgr_array[y, x, 0] = 255
+                    bgr_array[y, x, 1] = 0
+                    bgr_array[y, x, 2] = 0  # Red
+            
+            # C 코드: else if (data[idx] == 255 && data[idx + 1] == 255 && data[idx + 2] == 0)
+            # Yellow (B=255, G=255, R=0) 처리
+            elif b == 255 and g == 255 and r == 0:
+                if matrix_val > 32:
+                    bgr_array[y, x, 0] = 0
+                    bgr_array[y, x, 1] = 255
+                    bgr_array[y, x, 2] = 0  # Green
+                else:
+                    bgr_array[y, x, 0] = 255
+                    bgr_array[y, x, 1] = 0
+                    bgr_array[y, x, 2] = 0  # Red
+    
+    # BGR -> RGB 변환
+    bgr_array[:, :, [0, 2]] = bgr_array[:, :, [2, 0]]
+    
+    # 디더링된 결과를 6색 팔레트로 매핑
+    result = np.zeros((height, width), dtype=np.uint8)
+    for y in range(height):
+        for x in range(width):
+            rgb = tuple(bgr_array[y, x])
+            nearest_idx, _ = rgb_to_nearest_color(rgb)
+            result[y, x] = nearest_idx
+    
+    return result
+
+def ordered_dither(img_array):
+    """E Ink Spectra6용 Ordered Dithering (레거시, eink_default_dither 사용 권장)"""
+    return eink_default_dither(img_array)
     
     # C 코드: 색상 보정 (전체 이미지에 대해, 경계 포함)
     # C 코드: for (int y = 0; y < height; y++)
@@ -207,6 +373,172 @@ def nearest_color_quantize(img_array):
     return result
 
 
+def spectra6_vivid_dither(
+    img_array,
+    chroma_gain=CHROMA_GAIN,
+    chroma_threshold=CHROMA_THRESHOLD,
+    gray_split_L=GRAY_SPLIT_L,
+    hue_snap_strength=HUE_SNAP_STRENGTH,
+    wL=WEIGHT_L,
+    wC=WEIGHT_C,
+    wH=WEIGHT_H,
+    bn_size=BLUE_NOISE_SIZE,
+    post_gamma=POST_GAMMA,
+    bn_seed=0,
+):
+    """
+    Spectra 6 Vivid Dithering Pipeline
+    
+    OKLab 기반 색 공간 변환, chroma thresholding, hue snapping,
+    palette-aware mapping, blue-noise ordered dithering을 사용하여
+    E-ink에서 vivid하게 보이도록 최적화된 변환
+    
+    Args:
+        img_array: HxWx3 uint8 RGB 이미지
+        chroma_gain: 채도 증폭 계수 (1.25~1.50)
+        chroma_threshold: 채도 임계값, 이보다 낮으면 흑/백으로 snap (0.03~0.06)
+        gray_split_L: grayscale snap 시 밝기 기준 (0.50~0.60)
+        hue_snap_strength: 색상 방향 고정 강도 (0.70~0.95)
+        wL, wC, wH: OKLab 거리 가중치 (밝기, 채도, 색상)
+        bn_size: blue-noise tile 크기
+        post_gamma: 후처리 감마 값 (0.85~0.90)
+        bn_seed: blue-noise 생성 시드
+    
+    Returns:
+        HxW uint8 배열 (팔레트 인덱스 0-5)
+    """
+    H, W = img_array.shape[:2]
+    rgb01 = img_array.astype(np.float32) / 255.0
+    lab = rgb_to_oklab(rgb01)
+    
+    L = lab[..., 0]
+    a = lab[..., 1]
+    b = lab[..., 2]
+    chroma = np.sqrt(a*a + b*b)
+    
+    # 1) Chroma exaggeration
+    chroma2 = chroma * chroma_gain
+    scale = np.where(chroma > 1e-8, chroma2 / chroma, 0.0)
+    a2 = a * scale
+    b2 = b * scale
+    
+    # 2) Hue snapping (toward nearest palette hue among chromatic colors)
+    names, pal_rgb01, pal_lab = get_palette_oklab()
+    # chromatic palette indices (exclude K=0, W=1)
+    chromatic_idx = [2, 3, 4, 5]  # Yellow, Red, Blue, Green
+    pal_ab = pal_lab[chromatic_idx, 1:3]  # (4,2)
+    pal_ab_norm = pal_ab / np.clip(np.linalg.norm(pal_ab, axis=1, keepdims=True), 1e-8, None)
+    
+    ab = np.stack([a2, b2], axis=-1)  # HxWx2
+    ab_norm = ab / np.clip(np.linalg.norm(ab, axis=-1, keepdims=True), 1e-8, None)
+    
+    # choose nearest hue direction by max dot
+    dots = np.tensordot(ab_norm, pal_ab_norm.T, axes=([2],[0]))  # HxWx4
+    best = np.argmax(dots, axis=-1)  # HxW
+    target_dir = pal_ab_norm[best]   # HxWx2
+    
+    # blend direction
+    new_dir = (1 - hue_snap_strength) * ab_norm + hue_snap_strength * target_dir
+    new_dir = new_dir / np.clip(np.linalg.norm(new_dir, axis=-1, keepdims=True), 1e-8, None)
+    
+    a3 = new_dir[..., 0] * chroma2
+    b3 = new_dir[..., 1] * chroma2
+    
+    lab2 = np.stack([L, a3, b3], axis=-1)
+    
+    # 3) Chroma threshold -> grayscale snap
+    # 주의: chroma가 매우 낮을 때만 grayscale로 snap
+    # chroma가 낮아도 약간의 색상 정보가 있으면 유지
+    lowc = chroma < chroma_threshold
+    labK = pal_lab[0]  # Black
+    labW = pal_lab[1]  # White
+    # grayscale snap은 매우 낮은 chroma일 때만 적용
+    lab2[lowc & (L < gray_split_L)] = labK
+    lab2[lowc & (L >= gray_split_L)] = labW
+    
+    # 4) Palette-aware mapping + 2-color mixing via ordered dithering
+    palL = pal_lab[:, 0][None, None, :]  # 1x1x6
+    pala = pal_lab[:, 1][None, None, :]
+    palb = pal_lab[:, 2][None, None, :]
+    
+    Lt = lab2[..., 0][..., None]
+    at = lab2[..., 1][..., None]
+    bt = lab2[..., 2][..., None]
+    
+    dL = Lt - palL
+    da = at - pala
+    db = bt - palb
+    
+    Ct = np.sqrt(lab2[..., 1]**2 + lab2[..., 2]**2)[..., None]
+    Cp = np.sqrt((pal_lab[:,1]**2 + pal_lab[:,2]**2))[None, None, :]
+    
+    # hue distance approx: 1 - cos(angle)
+    abt2 = np.stack([lab2[...,1], lab2[...,2]], axis=-1)  # HxWx2
+    abp2 = pal_lab[:,1:3]  # 6x2
+    abt_norm = abt2 / np.clip(np.linalg.norm(abt2, axis=-1, keepdims=True), 1e-8, None)  # HxWx2
+    abp_norm = abp2 / np.clip(np.linalg.norm(abp2, axis=-1, keepdims=True), 1e-8, None)  # 6x2
+    cos = np.tensordot(abt_norm, abp_norm.T, axes=([2],[0]))  # HxWx6
+    hue_dist = 1.0 - cos  # HxWx6
+    
+    dist = (wL*(dL**2) + wC*((Ct-Cp)**2) + wH*(hue_dist**2)).astype(np.float32)  # HxWx6
+    
+    # best and second best
+    best_idx = np.argmin(dist, axis=-1)
+    dist2 = dist.copy()
+    dist2[np.arange(H)[:,None], np.arange(W)[None,:], best_idx] = np.inf
+    second_idx = np.argmin(dist2, axis=-1)
+    
+    c1 = pal_lab[best_idx]     # HxWx3
+    c2 = pal_lab[second_idx]   # HxWx3
+    t_lab = lab2               # HxWx3
+    
+    # mixing coefficient t (proportion of c2) by projection onto segment c1->c2
+    v = (c2 - c1)
+    vv = np.sum(v*v, axis=-1, keepdims=True)
+    t = np.sum((t_lab - c1) * v, axis=-1, keepdims=True) / np.clip(vv, 1e-8, None)
+    t = np.clip(t, 0.0, 1.0)[..., 0]  # HxW
+    
+    # blue-noise ordered dithering decision
+    bn = make_blue_noise_tile(bn_size, seed=bn_seed)
+    u = bn[np.arange(H)[:,None] % bn_size, np.arange(W)[None,:] % bn_size]  # HxW in [0,1)
+    use_c2 = (u < t)  # if threshold smaller than proportion -> choose c2
+    
+    out_lab = np.where(use_c2[..., None], c2, c1)
+    
+    # 5) Convert back to RGB and apply post-gamma
+    out_rgb01 = oklab_to_rgb(out_lab)
+    out_rgb01 = np.clip(out_rgb01, 0.0, 1.0) ** post_gamma
+    out_rgb = (out_rgb01 * 255.0 + 0.5).astype(np.uint8)
+    
+    # 6) Map OKLab space에서 직접 팔레트 인덱스 선택 (더 정확)
+    # OKLab 공간에서 직접 거리 계산
+    out_lab_expanded = out_lab[:, :, None, :]  # (H, W, 1, 3)
+    pal_lab_expanded = pal_lab[None, None, :, :]  # (1, 1, 6, 3)
+    
+    # OKLab 거리 계산 (가중치 적용)
+    dL = out_lab_expanded[..., 0] - pal_lab_expanded[..., 0]  # (H, W, 6)
+    da = out_lab_expanded[..., 1] - pal_lab_expanded[..., 1]
+    db = out_lab_expanded[..., 2] - pal_lab_expanded[..., 2]
+    
+    # chroma와 hue 거리
+    out_C = np.sqrt(out_lab[..., 1]**2 + out_lab[..., 2]**2)[..., None]  # (H, W, 1)
+    pal_C = np.sqrt(pal_lab[:, 1]**2 + pal_lab[:, 2]**2)[None, None, :]  # (1, 1, 6)
+    
+    # hue distance (cosine similarity)
+    out_ab = np.stack([out_lab[..., 1], out_lab[..., 2]], axis=-1)  # (H, W, 2)
+    pal_ab = pal_lab[:, 1:3]  # (6, 2)
+    out_ab_norm = out_ab / np.clip(np.linalg.norm(out_ab, axis=-1, keepdims=True), 1e-8, None)
+    pal_ab_norm = pal_ab / np.clip(np.linalg.norm(pal_ab, axis=-1, keepdims=True), 1e-8, None)
+    cos_hue = np.tensordot(out_ab_norm, pal_ab_norm.T, axes=([2],[0]))  # (H, W, 6)
+    hue_dist = 1.0 - cos_hue
+    
+    # 가중 거리
+    distances = (wL * (dL**2) + wC * ((out_C - pal_C)**2) + wH * (hue_dist**2)).astype(np.float32)
+    result = np.argmin(distances, axis=-1).astype(np.uint8)  # (H, W)
+    
+    return result
+
+
 def convert_jpg_to_bin(input_jpg, output_bin, use_dithering=True):
     """JPG 파일을 EPD BIN 형식으로 변환"""
     print(f"입력 파일 로딩: {input_jpg}")
@@ -237,10 +569,11 @@ def convert_jpg_to_bin(input_jpg, output_bin, use_dithering=True):
     # numpy 배열로 변환
     img_array = np.array(canvas, dtype=np.uint8)
     
-    # 직접 구현한 색상 양자화 사용 (정확한 6색 팔레트 매칭)
+    # E Ink 기본 디더링 사용 (기본값)
     if use_dithering:
-        print("Ordered Dithering (8x8 Bayer) 적용 중...")
-        data = ordered_dither(img_array)
+        print("E Ink Default Dithering 적용 중...")
+        print("  (8x8 Bayer matrix, official E Ink algorithm)")
+        data = eink_default_dither(img_array)
     else:
         print("가장 가까운 색상으로 양자화 중...")
         data = nearest_color_quantize(img_array)
@@ -277,10 +610,17 @@ def main():
 색상 팔레트:
   0: 검정 (Black)
   1: 흰색 (White)
-  2: 빨강 (Red)
-  3: 노랑 (Yellow)
-  4: 주황 (Orange)
+  2: 노랑 (Yellow)
+  3: 빨강 (Red)
+  4: 파랑 (Blue)
   5: 초록 (Green)
+
+기본 알고리즘: Spectra 6 Vivid Dithering
+  - OKLab 색 공간 기반 변환
+  - Chroma thresholding 및 exaggeration
+  - Hue snapping
+  - Blue-noise ordered dithering
+  - E-ink에서 vivid하게 보이도록 최적화
         """
     )
     

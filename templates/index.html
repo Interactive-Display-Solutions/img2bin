@@ -362,8 +362,122 @@
                 <div class="options" style="margin-top: 20px;">
                     <label class="checkbox-label">
                         <input type="checkbox" id="ditherCheckbox" checked>
-                        <span data-i18n="dither_option">Use Floyd-Steinberg dithering (smoother gradients)</span>
+                        <span data-i18n="dither_option">Enable dithering</span>
                     </label>
+                </div>
+                
+                <div class="options" style="margin-top: 15px;">
+                    <label for="algorithmSelect" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;" data-i18n="algorithm_label">Dithering Algorithm:</label>
+                    <select id="algorithmSelect" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; background: white; cursor: pointer;">
+                        <option value="eink_default" data-i18n="alg_eink_default">E Ink Default (Official Algorithm) - Default</option>
+                        <option value="floydSteinberg_serpentine" data-i18n="alg_floyd_serp">Floyd-Steinberg (Serpentine)</option>
+                        <option value="floydSteinberg" data-i18n="alg_floyd">Floyd-Steinberg (Error Diffusion) - epdoptimize default</option>
+                        <option value="vivid" data-i18n="alg_vivid">Spectra 6 Vivid (OKLab-based, optimized)</option>
+                        <option value="jarvis" data-i18n="alg_jarvis">Jarvis (Error Diffusion)</option>
+                        <option value="stucki" data-i18n="alg_stucki">Stucki (Error Diffusion)</option>
+                        <option value="burkes" data-i18n="alg_burkes">Burkes (Error Diffusion)</option>
+                        <option value="sierra3" data-i18n="alg_sierra3">Sierra-3 (Error Diffusion)</option>
+                        <option value="sierra2" data-i18n="alg_sierra2">Sierra-2 (Error Diffusion)</option>
+                        <option value="sierra2-4a" data-i18n="alg_sierra2_4a">Sierra-2-4A (Error Diffusion)</option>
+                        <option value="bayer4" data-i18n="alg_bayer4">Bayer Ordered (4x4)</option>
+                        <option value="bayer8" data-i18n="alg_bayer8">Bayer Ordered (8x8)</option>
+                        <option value="ordered" data-i18n="alg_ordered">Ordered Dither (8x8, legacy)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 실시간 조정 및 미리보기 -->
+            <div class="card" id="liveAdjustCard" style="display: none;">
+                <h2 data-i18n="live_adjust_title">🎛️ Live Adjustment & Preview</h2>
+                <p style="margin-bottom: 20px; color: #666; font-size: 0.9em;" data-i18n="live_adjust_desc">
+                    Adjust image settings and see dithering results in real-time
+                </p>
+                
+                <p style="font-size: 0.85em; color: #666; margin-bottom: 15px;" data-i18n="live_adjust_desc2">
+                    Adjust image properties and see dithering results in real-time. These adjustments are applied before dithering.
+                </p>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                        <span data-i18n="contrast_label">Contrast:</span>
+                        <span id="contrastValue">1.00</span>
+                        <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="contrast_desc">(0.5-2.0, 1.0=original)</span>
+                    </label>
+                    <input type="range" id="contrastSlider" min="0.5" max="2.0" step="0.05" value="1.0" 
+                           style="width: 100%; height: 8px; border-radius: 5px; background: #ddd; outline: none;">
+                    <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                        <span data-i18n="contrast_low">↓ Lower (0.5): Softer, less distinction</span> | 
+                        <span data-i18n="contrast_high">Higher (2.0): Sharper, more dramatic ↑</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                        <span data-i18n="brightness_label">Brightness:</span>
+                        <span id="brightnessValue">1.00</span>
+                        <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="brightness_desc">(0.5-2.0, 1.0=original)</span>
+                    </label>
+                    <input type="range" id="brightnessSlider" min="0.5" max="2.0" step="0.05" value="1.0" 
+                           style="width: 100%; height: 8px; border-radius: 5px; background: #ddd; outline: none;">
+                    <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                        <span data-i18n="brightness_low">↓ Lower (0.5): Darker image</span> | 
+                        <span data-i18n="brightness_high">Higher (2.0): Brighter image ↑</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                        <span data-i18n="saturation_label">Saturation:</span>
+                        <span id="saturationValue">1.00</span>
+                        <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="saturation_desc">(0.0-2.0, 1.0=original)</span>
+                    </label>
+                    <input type="range" id="saturationSlider" min="0.0" max="2.0" step="0.05" value="1.0" 
+                           style="width: 100%; height: 8px; border-radius: 5px; background: #ddd; outline: none;">
+                    <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                        <span data-i18n="saturation_low">↓ Lower (0.0): Grayscale</span> | 
+                        <span data-i18n="saturation_high">Higher (2.0): More vivid colors ↑</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                        <span data-i18n="hue_label">Hue Shift:</span>
+                        <span id="hueValue">0°</span>
+                        <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="hue_desc">(-180° to +180°)</span>
+                    </label>
+                    <input type="range" id="hueSlider" min="-180" max="180" step="5" value="0" 
+                           style="width: 100%; height: 8px; border-radius: 5px; background: #ddd; outline: none;">
+                    <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                        <span data-i18n="hue_left">← Left (-180°): Rotate colors counterclockwise</span> | 
+                        <span data-i18n="hue_right">Right (+180°): Rotate colors clockwise →</span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
+                        <span data-i18n="smoothing_label">Smoothing:</span>
+                        <span id="smoothingValue">0.00</span>
+                        <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="smoothing_desc">(0.0-2.0, reduces dot pattern)</span>
+                    </label>
+                    <input type="range" id="smoothingSlider" min="0.0" max="2.0" step="0.1" value="0.0" 
+                           style="width: 100%; height: 8px; border-radius: 5px; background: #ddd; outline: none;">
+                    <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                        <span data-i18n="smoothing_low">↓ Lower (0.0): Sharp, visible dots</span> | 
+                        <span data-i18n="smoothing_high">Higher (2.0): Softer, smoother appearance ↑</span>
+                    </div>
+                </div>
+
+                <button class="btn" id="livePreviewBtn" style="width: 100%; margin-top: 15px; margin-bottom: 15px;" data-i18n="update_preview">🔄 Update Preview</button>
+
+                <div class="loading" id="livePreviewLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p data-i18n="updating">Updating...</p>
+                </div>
+
+                <div class="result" id="livePreviewResult" style="display: none;">
+                    <img id="livePreviewImage" class="preview-image" alt="Live preview">
+                    <div class="stats" id="livePreviewStats"></div>
+                    <button class="btn" id="liveDownloadBtn" style="width: 100%; margin-top: 15px;" data-i18n="download_bin">📥 Download BIN File</button>
                 </div>
             </div>
 
@@ -387,6 +501,131 @@
                 <div class="result" id="previewResult">
                     <img id="previewPreview" class="preview-image" alt="Preview">
                     <div class="stats" id="previewStats"></div>
+                </div>
+            </div>
+
+            <!-- 알고리즘 테스트 (선택한 알고리즘만) -->
+            <div class="card">
+                <h2 data-i18n="test_algorithm_title">🔍 Test Algorithm with Reference</h2>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;" data-i18n="test_algorithm_desc">
+                    Select an algorithm and upload an image. If a bin file exists in the same folder, error rate will be calculated.
+                </p>
+                
+                <!-- 알고리즘 선택 -->
+                <div style="margin-bottom: 15px;">
+                    <label for="testAlgorithmSelect" style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;" data-i18n="algorithm_label">Dithering Algorithm:</label>
+                    <select id="testAlgorithmSelect" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 1em; background: white; cursor: pointer;">
+                        <option value="eink_default" data-i18n="alg_eink_default">E Ink Default (Official Algorithm) - Default</option>
+                        <option value="floydSteinberg_serpentine" data-i18n="alg_floyd_serp">Floyd-Steinberg (Serpentine)</option>
+                        <option value="floydSteinberg" data-i18n="alg_floyd">Floyd-Steinberg (Error Diffusion) - epdoptimize default</option>
+                        <option value="vivid" data-i18n="alg_vivid">Spectra 6 Vivid (OKLab-based, optimized)</option>
+                        <option value="jarvis" data-i18n="alg_jarvis">Jarvis (Error Diffusion)</option>
+                        <option value="stucki" data-i18n="alg_stucki">Stucki (Error Diffusion)</option>
+                        <option value="burkes" data-i18n="alg_burkes">Burkes (Error Diffusion)</option>
+                        <option value="sierra3" data-i18n="alg_sierra3">Sierra-3 (Error Diffusion)</option>
+                        <option value="sierra2" data-i18n="alg_sierra2">Sierra-2 (Error Diffusion)</option>
+                        <option value="sierra2-4a" data-i18n="alg_sierra2_4a">Sierra-2-4A (Error Diffusion)</option>
+                        <option value="bayer4" data-i18n="alg_bayer4">Bayer Ordered (4x4)</option>
+                        <option value="bayer8" data-i18n="alg_bayer8">Bayer Ordered (8x8)</option>
+                        <option value="ordered" data-i18n="alg_ordered">Ordered Dither (8x8, legacy)</option>
+                        <option value="quantization_only" data-i18n="alg_quantization">Quantization Only (No Dithering)</option>
+                    </select>
+                </div>
+                
+                <!-- 이미지 조정 옵션 -->
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <h3 style="margin-top: 0; font-size: 1em;" data-i18n="image_adjustments">Image Adjustments:</h3>
+                    <p style="font-size: 0.85em; color: #666; margin-bottom: 15px;" data-i18n="adjustments_desc">
+                        Adjust image properties before dithering. Changes affect how colors are converted to the 6-color palette.
+                    </p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #333;">
+                            <span data-i18n="contrast_label">Contrast:</span>
+                            <span id="testContrastValue">1.00</span>
+                            <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="contrast_desc">(0.5-2.0, 1.0=original)</span>
+                        </label>
+                        <input type="range" id="testContrastSlider" min="0.5" max="2.0" step="0.05" value="1.0" 
+                               style="width: 100%; height: 6px; border-radius: 5px; background: #ddd; outline: none;">
+                        <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                            <span data-i18n="contrast_low">↓ Lower (0.5): Softer, less distinction</span> | 
+                            <span data-i18n="contrast_high">Higher (2.0): Sharper, more dramatic ↑</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #333;">
+                            <span data-i18n="brightness_label">Brightness:</span>
+                            <span id="testBrightnessValue">1.00</span>
+                            <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="brightness_desc">(0.5-2.0, 1.0=original)</span>
+                        </label>
+                        <input type="range" id="testBrightnessSlider" min="0.5" max="2.0" step="0.05" value="1.0" 
+                               style="width: 100%; height: 6px; border-radius: 5px; background: #ddd; outline: none;">
+                        <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                            <span data-i18n="brightness_low">↓ Lower (0.5): Darker image</span> | 
+                            <span data-i18n="brightness_high">Higher (2.0): Brighter image ↑</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #333;">
+                            <span data-i18n="saturation_label">Saturation:</span>
+                            <span id="testSaturationValue">1.00</span>
+                            <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="saturation_desc">(0.0-2.0, 1.0=original)</span>
+                        </label>
+                        <input type="range" id="testSaturationSlider" min="0.0" max="2.0" step="0.05" value="1.0" 
+                               style="width: 100%; height: 6px; border-radius: 5px; background: #ddd; outline: none;">
+                        <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                            <span data-i18n="saturation_low">↓ Lower (0.0): Grayscale</span> | 
+                            <span data-i18n="saturation_high">Higher (2.0): More vivid colors ↑</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #333;">
+                            <span data-i18n="hue_label">Hue Shift:</span>
+                            <span id="testHueValue">0°</span>
+                            <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="hue_desc">(-180° to +180°)</span>
+                        </label>
+                        <input type="range" id="testHueSlider" min="-180" max="180" step="5" value="0" 
+                               style="width: 100%; height: 6px; border-radius: 5px; background: #ddd; outline: none;">
+                        <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                            <span data-i18n="hue_left">← Left (-180°): Rotate colors counterclockwise</span> | 
+                            <span data-i18n="hue_right">Right (+180°): Rotate colors clockwise →</span>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 0;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 0.9em; color: #333;">
+                            <span data-i18n="smoothing_label">Smoothing:</span>
+                            <span id="testSmoothingValue">0.00</span>
+                            <span style="font-size: 0.8em; color: #666; margin-left: 5px;" data-i18n="smoothing_desc">(0.0-2.0, reduces dot pattern)</span>
+                        </label>
+                        <input type="range" id="testSmoothingSlider" min="0.0" max="2.0" step="0.1" value="0.0" 
+                               style="width: 100%; height: 6px; border-radius: 5px; background: #ddd; outline: none;">
+                        <div style="font-size: 0.75em; color: #888; margin-top: 3px;">
+                            <span data-i18n="smoothing_low">↓ Lower (0.0): Sharp, visible dots</span> | 
+                            <span data-i18n="smoothing_high">Higher (2.0): Softer, smoother appearance ↑</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="upload-area" id="testAlgorithmUploadArea">
+                    <div class="upload-icon">📊</div>
+                    <p data-i18n="test_algorithm_upload">Drag and drop JPG/PNG file or click to select</p>
+                    <input type="file" id="testAlgorithmInput" class="file-input" accept=".jpg,.jpeg,.png">
+                    <button class="btn" onclick="document.getElementById('testAlgorithmInput').click()" data-i18n="select_file">Select File</button>
+                </div>
+
+                <div class="loading" id="testAlgorithmLoading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p data-i18n="processing">Processing...</p>
+                </div>
+
+                <div class="error" id="testAlgorithmError"></div>
+
+                <div class="result" id="testAlgorithmResult" style="display: none;">
+                    <div id="testAlgorithmContainer"></div>
                 </div>
             </div>
         </div>
@@ -442,7 +681,21 @@
                 converting: "Converting...",
                 generating_preview: "Generating preview...",
                 download_bin: "📥 Download BIN File",
-                dither_option: "Use Floyd-Steinberg dithering (smoother gradients)",
+                dither_option: "Enable dithering",
+                algorithm_label: "Dithering Algorithm:",
+                alg_eink_default: "E Ink Default (Official Algorithm)",
+                alg_vivid: "Spectra 6 Vivid (OKLab-based, optimized)",
+                alg_floyd: "Floyd-Steinberg (Error Diffusion)",
+                alg_floyd_serp: "Floyd-Steinberg (Serpentine)",
+                alg_jarvis: "Jarvis (Error Diffusion)",
+                alg_stucki: "Stucki (Error Diffusion)",
+                alg_burkes: "Burkes (Error Diffusion)",
+                alg_sierra3: "Sierra-3 (Error Diffusion)",
+                alg_sierra2: "Sierra-2 (Error Diffusion)",
+                alg_sierra2_4a: "Sierra-2-4A (Error Diffusion)",
+                alg_bayer4: "Bayer Ordered (4x4)",
+                alg_bayer8: "Bayer Ordered (8x8)",
+                alg_ordered: "Ordered Dither (8x8, legacy)",
                 color_black: "Black",
                 color_white: "White",
                 color_yellow: "Yellow",
@@ -452,7 +705,45 @@
                 color_distribution: "Color Distribution",
                 file_size: "File size",
                 bytes: "bytes",
-                pixels: "px"
+                pixels: "px",
+                test_algorithm_title: "🔍 Test Algorithm with Reference",
+                test_algorithm_desc: "Select an algorithm and upload an image. If a bin file exists in the same folder, error rate will be calculated.",
+                test_algorithm_upload: "Drag and drop JPG/PNG file or click to select",
+                processing: "Processing...",
+                error_rate: "Error Rate",
+                reference_found: "Reference bin file found",
+                no_reference: "No reference bin file found",
+                algorithm: "Algorithm",
+                best_match: "Best Match",
+                image_adjustments: "Image Adjustments:",
+                live_adjust_title: "🎛️ Live Adjustment & Preview",
+                live_adjust_desc: "Adjust image settings and see dithering results in real-time",
+                live_adjust_desc2: "Adjust image properties and see dithering results in real-time. These adjustments are applied before dithering.",
+                adjustments_desc: "Adjust image properties before dithering. Changes affect how colors are converted to the 6-color palette.",
+                contrast_label: "Contrast:",
+                contrast_desc: "(0.5-2.0, 1.0=original)",
+                contrast_low: "↓ Lower (0.5): Softer, less distinction",
+                contrast_high: "Higher (2.0): Sharper, more dramatic ↑",
+                brightness_label: "Brightness:",
+                brightness_desc: "(0.5-2.0, 1.0=original)",
+                brightness_low: "↓ Lower (0.5): Darker image",
+                brightness_high: "Higher (2.0): Brighter image ↑",
+                saturation_label: "Saturation:",
+                saturation_desc: "(0.0-2.0, 1.0=original)",
+                saturation_low: "↓ Lower (0.0): Grayscale",
+                saturation_high: "Higher (2.0): More vivid colors ↑",
+                hue_label: "Hue Shift:",
+                hue_desc: "(-180° to +180°)",
+                hue_left: "← Left (-180°): Rotate colors counterclockwise",
+                hue_right: "Right (+180°): Rotate colors clockwise →",
+                smoothing_label: "Smoothing:",
+                smoothing_desc: "(0.0-2.0, reduces dot pattern)",
+                smoothing_low: "↓ Lower (0.0): Sharp, visible dots",
+                smoothing_high: "Higher (2.0): Softer, smoother appearance ↑",
+                update_preview: "🔄 Update Preview",
+                please_upload_image: "Please upload an image first.",
+                download_bin: "📥 Download BIN File",
+                updating: "Updating..."
             },
             ko: {
                 title: "🎨 JPG to BIN 변환기",
@@ -467,7 +758,21 @@
                 converting: "변환 중...",
                 generating_preview: "미리보기 생성 중...",
                 download_bin: "📥 BIN 파일 다운로드",
-                dither_option: "Floyd-Steinberg 디더링 사용 (더 부드러운 그라데이션)",
+                dither_option: "디더링 사용",
+                algorithm_label: "디더링 알고리즘:",
+                alg_eink_default: "E Ink 기본 (공식 알고리즘)",
+                alg_vivid: "Spectra 6 Vivid (OKLab 기반, 최적화)",
+                alg_floyd: "Floyd-Steinberg (오차 확산)",
+                alg_floyd_serp: "Floyd-Steinberg (지그재그 스캔)",
+                alg_jarvis: "Jarvis (오차 확산)",
+                alg_stucki: "Stucki (오차 확산)",
+                alg_burkes: "Burkes (오차 확산)",
+                alg_sierra3: "Sierra-3 (오차 확산)",
+                alg_sierra2: "Sierra-2 (오차 확산)",
+                alg_sierra2_4a: "Sierra-2-4A (오차 확산)",
+                alg_bayer4: "Bayer 정렬 디더링 (4x4)",
+                alg_bayer8: "Bayer 정렬 디더링 (8x8)",
+                alg_ordered: "정렬 디더링 (8x8, 레거시)",
                 color_black: "검정",
                 color_white: "흰색",
                 color_yellow: "노랑",
@@ -477,7 +782,46 @@
                 color_distribution: "색상 분포",
                 file_size: "파일 크기",
                 bytes: "바이트",
-                pixels: "픽셀"
+                pixels: "픽셀",
+                test_algorithm_title: "🔍 알고리즘 테스트 (참조 파일과 비교)",
+                test_algorithm_desc: "알고리즘을 선택하고 이미지를 업로드하세요. 같은 폴더에 bin 파일이 있으면 오류율을 계산합니다.",
+                test_algorithm_upload: "JPG/PNG 파일을 드래그하거나 클릭하세요",
+                processing: "처리 중...",
+                alg_quantization: "양자화만 (디더링 없음)",
+                error_rate: "오류율",
+                reference_found: "참조 bin 파일 발견",
+                no_reference: "참조 bin 파일 없음",
+                algorithm: "알고리즘",
+                best_match: "최적 매칭",
+                image_adjustments: "이미지 조정:",
+                live_adjust_title: "🎛️ 실시간 조정 및 미리보기",
+                live_adjust_desc: "이미지 설정을 조정하고 디더링 결과를 실시간으로 확인하세요",
+                live_adjust_desc2: "이미지 속성을 조정하고 디더링 결과를 실시간으로 확인하세요. 이 조정은 디더링 전에 적용됩니다.",
+                adjustments_desc: "디더링 전에 이미지 속성을 조정하세요. 변경 사항은 색상이 6색 팔레트로 변환되는 방식에 영향을 줍니다.",
+                contrast_label: "대비:",
+                contrast_desc: "(0.5-2.0, 1.0=원본)",
+                contrast_low: "↓ 낮음 (0.5): 부드럽고, 구분이 덜 명확",
+                contrast_high: "높음 (2.0): 더 선명하고, 더 극적인 효과 ↑",
+                brightness_label: "밝기:",
+                brightness_desc: "(0.5-2.0, 1.0=원본)",
+                brightness_low: "↓ 낮음 (0.5): 더 어두운 이미지",
+                brightness_high: "높음 (2.0): 더 밝은 이미지 ↑",
+                saturation_label: "채도:",
+                saturation_desc: "(0.0-2.0, 1.0=원본)",
+                saturation_low: "↓ 낮음 (0.0): 회색조",
+                saturation_high: "높음 (2.0): 더 선명한 색상 ↑",
+                hue_label: "색상 회전:",
+                hue_desc: "(-180° ~ +180°)",
+                hue_left: "← 왼쪽 (-180°): 색상을 반시계 방향으로 회전",
+                hue_right: "오른쪽 (+180°): 색상을 시계 방향으로 회전 →",
+                smoothing_label: "부드러움:",
+                smoothing_desc: "(0.0-2.0, 점 패턴 감소)",
+                smoothing_low: "↓ 낮음 (0.0): 선명하고, 점이 보임",
+                smoothing_high: "높음 (2.0): 부드럽고, 더 매끄러운 외관 ↑",
+                update_preview: "🔄 미리보기 업데이트",
+                please_upload_image: "먼저 이미지를 업로드해주세요.",
+                download_bin: "📥 BIN 파일 다운로드",
+                updating: "업데이트 중..."
             }
         };
 
@@ -510,7 +854,11 @@
             document.documentElement.lang = currentLang;
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
-                el.textContent = t(key);
+                if (el.tagName === 'OPTION') {
+                    el.textContent = t(key);
+                } else {
+                    el.textContent = t(key);
+                }
             });
             
             // Update language buttons
@@ -627,6 +975,7 @@
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('dither', document.getElementById('ditherCheckbox').checked);
+                formData.append('algorithm', document.getElementById('algorithmSelect').value);
                 
                 document.getElementById('convertLoading').classList.add('show');
                 document.getElementById('convertError').classList.remove('show');
@@ -649,6 +998,13 @@
                     document.getElementById('convertPreview').src = data.preview;
                     renderStats(data.stats, 'convertStats');
                     document.getElementById('convertResult').classList.add('show');
+                    
+                    // 실시간 조정 카드 표시
+                    if (data.session_id) {
+                        window.currentSessionId = data.session_id;
+                        document.getElementById('liveAdjustCard').style.display = 'block';
+                        // 초기 미리보기는 자동으로 표시하지 않음 (버튼으로만)
+                    }
                     
                     // Download button setup
                     document.getElementById('downloadBtn').onclick = () => {
@@ -700,6 +1056,240 @@
                 });
             }
         );
+
+        // Test selected algorithm
+        setupDragAndDrop(
+            document.getElementById('testAlgorithmUploadArea'),
+            document.getElementById('testAlgorithmInput'),
+            (file) => {
+                const algorithm = document.getElementById('testAlgorithmSelect').value;
+                
+                document.getElementById('testAlgorithmLoading').style.display = 'block';
+                document.getElementById('testAlgorithmError').classList.remove('show');
+                document.getElementById('testAlgorithmResult').style.display = 'none';
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('algorithm', algorithm);
+                const testContrastSlider = document.getElementById('testContrastSlider');
+                const testBrightnessSlider = document.getElementById('testBrightnessSlider');
+                const testSaturationSlider = document.getElementById('testSaturationSlider');
+                const testHueSlider = document.getElementById('testHueSlider');
+                const testSmoothingSlider = document.getElementById('testSmoothingSlider');
+                
+                formData.append('contrast', testContrastSlider ? testContrastSlider.value : '1.0');
+                formData.append('brightness', testBrightnessSlider ? testBrightnessSlider.value : '1.0');
+                formData.append('saturation', testSaturationSlider ? testSaturationSlider.value : '1.0');
+                formData.append('hue_shift', testHueSlider ? testHueSlider.value : '0');
+                formData.append('smoothing', testSmoothingSlider ? testSmoothingSlider.value : '0.0');
+                
+                fetch('/compare-single', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('testAlgorithmLoading').style.display = 'none';
+                    
+                    if (data.error || !data.success) {
+                        document.getElementById('testAlgorithmError').textContent = data.error || 'Unknown error';
+                        document.getElementById('testAlgorithmError').classList.add('show');
+                        return;
+                    }
+                    
+                    const container = document.getElementById('testAlgorithmContainer');
+                    let html = '';
+                    
+                    // 참조 정보
+                    if (data.has_reference) {
+                        html += `<div style="background: #e8f5e9; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                            <strong>✅ ${t('reference_found')}</strong><br>
+                            <small>${data.reference_path || ''}</small>
+                        </div>`;
+                    } else {
+                        html += `<div style="background: #fff3e0; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                            <strong>ℹ️ ${t('no_reference')}</strong><br>
+                            <small>No bin file found for comparison. Result shown without error rate.</small>
+                        </div>`;
+                    }
+                    
+                    const errorBadge = data.error_rate !== null 
+                        ? `<span style="background: ${data.error_rate < 1.0 ? '#4caf50' : data.error_rate < 5.0 ? '#ff9800' : '#f44336'}; color: white; padding: 6px 12px; border-radius: 4px; font-size: 1em; font-weight: bold;">
+                            ${data.error_rate.toFixed(2)}%
+                        </span>`
+                        : '';
+                    
+                    html += `<div class="card" style="padding: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0; font-size: 1.3em;">${data.algorithm}</h3>
+                        </div>
+                        ${data.error_rate !== null ? `<div style="margin-bottom: 15px;">
+                            <strong style="font-size: 1.1em;">${t('error_rate')}:</strong> ${errorBadge}
+                        </div>` : ''}
+                        <img src="${data.preview}" style="width: 100%; max-width: 600px; border-radius: 8px; margin-bottom: 15px; display: block; margin-left: auto; margin-right: auto;" alt="${data.algorithm}">
+                        <div style="font-size: 1em;">
+                            ${renderStatsHTML(data.stats)}
+                        </div>
+                    </div>`;
+                    
+                    container.innerHTML = html;
+                    document.getElementById('testAlgorithmResult').style.display = 'block';
+                })
+                .catch(error => {
+                    document.getElementById('testAlgorithmLoading').style.display = 'none';
+                    document.getElementById('testAlgorithmError').textContent = 'Error: ' + error.message;
+                    document.getElementById('testAlgorithmError').classList.add('show');
+                });
+            }
+        );
+        
+        // Test 섹션의 슬라이더 이벤트 리스너
+        document.getElementById('testContrastSlider').addEventListener('input', (e) => {
+            document.getElementById('testContrastValue').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        
+        document.getElementById('testBrightnessSlider').addEventListener('input', (e) => {
+            document.getElementById('testBrightnessValue').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        
+        document.getElementById('testSaturationSlider').addEventListener('input', (e) => {
+            document.getElementById('testSaturationValue').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        
+        document.getElementById('testHueSlider').addEventListener('input', (e) => {
+            document.getElementById('testHueValue').textContent = e.target.value + '°';
+        });
+        
+        document.getElementById('testSmoothingSlider').addEventListener('input', (e) => {
+            document.getElementById('testSmoothingValue').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        // 실시간 미리보기 업데이트 (버튼 클릭 시)
+        function updateLivePreview() {
+            if (!window.currentSessionId) {
+                // 세션이 없으면 에러 메시지 표시
+                alert(t('please_upload_image') || 'Please upload an image first.');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('session_id', window.currentSessionId);
+            formData.append('algorithm', document.getElementById('algorithmSelect').value);
+            formData.append('contrast', document.getElementById('contrastSlider').value);
+            formData.append('brightness', document.getElementById('brightnessSlider').value);
+            formData.append('saturation', document.getElementById('saturationSlider').value);
+            formData.append('hue_shift', document.getElementById('hueSlider').value);
+            
+            const smoothingSlider = document.getElementById('smoothingSlider');
+            if (smoothingSlider) {
+                formData.append('smoothing', smoothingSlider.value);
+            } else {
+                formData.append('smoothing', '0.0');
+            }
+            
+            document.getElementById('livePreviewLoading').style.display = 'block';
+            document.getElementById('livePreviewResult').style.display = 'none';
+            
+            fetch('/preview-live', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('livePreviewLoading').style.display = 'none';
+                
+                if (data.error || !data.success) {
+                    // 세션 에러는 조용히 처리 (이미지 업로드 전에는 정상)
+                    if (data.error && data.error.includes('No image uploaded')) {
+                        alert(t('please_upload_image') || 'Please upload an image first.');
+                        return;
+                    }
+                    console.error('Live preview error:', data.error || 'Unknown error');
+                    return;
+                }
+                
+                    document.getElementById('livePreviewImage').src = data.preview;
+                    renderStats(data.stats, 'livePreviewStats');
+                    document.getElementById('livePreviewResult').style.display = 'block';
+                    
+                    // Download button setup
+                    if (data.download_url) {
+                        const downloadBtn = document.getElementById('liveDownloadBtn');
+                        downloadBtn.onclick = () => {
+                            window.location.href = data.download_url;
+                        };
+                        downloadBtn.style.display = 'block';
+                    }
+            })
+            .catch(error => {
+                document.getElementById('livePreviewLoading').style.display = 'none';
+                console.error('Live preview error:', error);
+                alert('Failed to update preview. Please try again.');
+            });
+        }
+        
+        // 슬라이더 이벤트 리스너 (값만 업데이트, 미리보기는 버튼으로)
+        document.getElementById('contrastSlider').addEventListener('input', (e) => {
+            document.getElementById('contrastValue').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        
+        document.getElementById('brightnessSlider').addEventListener('input', (e) => {
+            document.getElementById('brightnessValue').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        
+        document.getElementById('saturationSlider').addEventListener('input', (e) => {
+            document.getElementById('saturationValue').textContent = parseFloat(e.target.value).toFixed(2);
+        });
+        
+        document.getElementById('hueSlider').addEventListener('input', (e) => {
+            document.getElementById('hueValue').textContent = e.target.value + '°';
+        });
+        
+        const smoothingSlider = document.getElementById('smoothingSlider');
+        if (smoothingSlider) {
+            smoothingSlider.addEventListener('input', (e) => {
+                const smoothingValue = document.getElementById('smoothingValue');
+                if (smoothingValue) {
+                    smoothingValue.textContent = parseFloat(e.target.value).toFixed(2);
+                }
+            });
+        }
+        
+        // Preview 버튼 클릭 시 미리보기 업데이트
+        const livePreviewBtn = document.getElementById('livePreviewBtn');
+        if (livePreviewBtn) {
+            livePreviewBtn.addEventListener('click', () => {
+                updateLivePreview();
+            });
+        }
+        
+        // 알고리즘 변경 시에는 자동 업데이트 안 함 (버튼으로만)
+
+        // Helper function to render stats HTML
+        function renderStatsHTML(stats) {
+            let html = `<div style="margin-top: 10px;">
+                <strong>${t('file_size')}:</strong> ${stats.file_size.toLocaleString()} ${t('bytes')}<br>
+                <strong>${t('color_distribution')}:</strong><br>
+                <div style="margin-top: 5px;">`;
+            
+            for (const [colorName, data] of Object.entries(stats.colors)) {
+                const colorInfo = colorMap[colorName];
+                if (colorInfo) {
+                    html += `<div style="display: flex; align-items: center; gap: 5px; margin: 3px 0;">
+                        <span style="display: inline-block; width: 15px; height: 15px; background-color: ${colorInfo.color}; border: 1px solid #ddd; border-radius: 2px;"></span>
+                        <span>${colorName}: ${data.percentage}%</span>
+                    </div>`;
+                }
+            }
+            
+            html += `</div></div>`;
+            return html;
+        }
     </script>
 </body>
 </html>
