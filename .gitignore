@@ -36,7 +36,6 @@ test_algorithms.py
 demo*.jpg
 !demo5.jpg
 demo*.bin
-!demo5bin
 
 # 테스트 파일
 test_*
